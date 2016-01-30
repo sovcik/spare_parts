@@ -1,31 +1,36 @@
 /*
- * Siemens/Bosch dishwasher lower basket bearing
+ * Siemens/Bosch dishwasher lower basket clamp
+ *
+ * All lenghts are in milimeters.
  */
 
-// wire diameter
-wireDiameter = 41;
+// wire diameter 4.1mm
+wireDiameter = 4.1;
 
 // wire radius
 wireRadius = wireDiameter/2;
 
-// wire distance
-wireDistance = 147; //105
+// distance between two top wires
+wireDistance = 14.7; 
 
-// wall thickness
-wallThickness = 20;
+// clip wall thickness
+wallThickness = 2.0;
 
-// corner radius
-cornerRadius = 10;
+// corner rounding radius
+cornerRadius = 1.0;
 
 // bearing width
-bearingWidth = 85;
+clampWidth = 8.1;
 
 // extra 
 lowerPadding = 0;
 
 //***************************
 
-clipHeight = 2*(wireDiameter+wallThickness)+lowerPadding;
+clipHeight = wireDiameter + 2*wallThickness + lowerPadding;
+clipWidth = wireDiameter + 2*wallThickness;
+topClipZ = clampWidth;
+botClipZ = wireDistance;
 
 totalWidth = 2*wireDiameter+wireDistance+2*wallThickness;
 echo("Total bearing width =", totalWidth );
@@ -34,88 +39,85 @@ echo("Total bearing width =", totalWidth );
 
 module cylinder_outer(height,radius,fn){
     fudge = 1/cos(180/fn);
-    cylinder(h=height,r=radius*fudge,$fn=fn);
+    cylinder(h=height,r=radius*fudge,$fn=fn, center=true);
 }
 
 
-module clip(wiDia,wallTh,cornRad,width){
-    x = 2*wallTh+wiDia;
-    y = 2*wallTh+wiDia;
+module clip(w, h, r, d){
+    cube([w-2*r,h,d], center=true);
+    cube([w,h-2*r,d], center=true);
+    translate([-w/2+r,h/2-r,0])
+        cylinder(h=d,r=r,$fn=60, center=true);
+    translate([-w/2+r,-h/2+r,0])
+        cylinder(h=d,r=r,$fn=60, center=true);
+    translate([w/2-r,h/2-r,0])
+        cylinder(h=d,r=r,$fn=60, center=true);
+    translate([w/2-r,-h/2+r,0])
+        cylinder(h=d,r=r,$fn=60, center=true);
     
-    translate([cornRad,0,0])
-        cube([x-2*cornRad,y,width], center=false);
-    translate([0,cornRad,0])
-        cube([cornRad,y-2*cornRad,width], center=false);
-    translate([x-cornRad,cornRad,0])
-        cube([cornRad,y-2*cornRad,width], center=false);
-    translate([cornRad,y-cornRad])
-        cylinder(h=width,r=cornRad,$fn=60);
-    translate([x-cornRad,y-cornRad])
-        cylinder(h=width,r=cornRad,$fn=60);
-    translate([x-cornRad,cornRad])
-        cylinder(h=width,r=cornRad,$fn=60);
-    translate([cornRad,cornRad])
-        cylinder(h=width,r=cornRad,$fn=60);
 } 
 
-module bearingBody(wiDia, wallTh, cornRad, width, wiDis, loPad){
+module bearingBody(cw, ch, cr, cz, wd, wdst){
+    
     // draw left upper clip
-    clip(wiDia, wallTh, cornRad, width);
+    clip(cw, ch, cr, cz);
     
     // draw right upper clip
-    translate([wiDis+wiDia,0,0])
-        clip(wiDia, wallTh, cornRad, width);
-
-    // center of upper wire
-    upC = wallTh+wiDia/2;
-    // center of lower wire
-    loC = upC-wiDia;
-    // bottom of lower clip
-    loB = loC-wiDia/2-wallTh-loPad;
+    translate([wdst+wd,0,0])
+        clip(cw, ch, cr, cz);
 
     // draw lower clip connecting two upper ones
-    translate([wallTh+wiDia, loB, width])
-    rotate(a=90,v=[0,1,0])
-        clip(wiDia, wallTh, cornRad, wiDis);
-
+    translate([(wd+wdst)/2, -wd, 0])
+        rotate(a=90,v=[0,1,0])
+            clip(cw, ch, cr, wdst);
 }
 
-module wires(wireR, wireDst, leftCenter, width){
+module wire(wr, l) {
+    cylinder_outer(l, wr, 60);
+    translate([0, -2*wr, 0])
+        cube([wr*2,4*wr,l], center=true);   
+}
+
+module wires(wr, wdst, l){
 
     // left wire
-    translate(leftCenter+[0,0,-width]){
-        cylinder_outer(width+width, wireR, 60);
-        translate([-wireR, -width, 0])
-            cube([wireR*2,width,width*2]);
-    }
+    wire(wr, l);
     
     // right wire
-    translate(leftCenter+[wireDst+2*wireR,0,-width]){
-        cylinder_outer(width+width, wireR, 60);
-        translate([-wireR, -width, 0])
-            cube([wireR*2,width,width*2]);
-    }
+    translate([wdst+2*wr,0,0])
+        wire(wr, l);
     
     // bottom wire
-    translate(leftCenter-[width*0.75,2*wireR,0])
-        rotate(a=90,v=[0,1,0]){
-            cylinder_outer(wireDst+2*width, wireR ,60);
-            translate([-wireR, -width, 0])
-                cube([wireR*2,width,wireDst+2*width]);   
-        }   
+    translate([(2*wr+wdst)/2, -2*wr, 0])
+        rotate(a=90,v=[0,1,0])
+            wire(wr, wdst*2);
 }
+
+module clicks(wr, wdst, l){
+    // bottom clicks
+    translate([(2*wr+wdst)/2, -2*wr, 0])
+        rotate(a=90,v=[0,1,0]){
+            translate([wr*1.1,-wr*1.2,0])
+                cylinder(h=wdst,r=wr*0.2,$fn=60, center=true);
+            translate([-wr*1.1,-wr*1.2,0])
+                cylinder(h=wdst,r=wr*0.2,$fn=60, center=true);
+            
+        }      
+}
+
+//********************************************
 
 difference(){
-    // main body
-    bearingBody(wireDiameter, wallThickness, cornerRadius, bearingWidth, wireDistance, lowerPadding);
+    // draw body
+    bearingBody(clipWidth, clipHeight, cornerRadius, topClipZ,  wireDiameter, wireDistance);
 
-    // cut-out holes for wires
-    wires(wireDiameter/2, wireDistance, [wallThickness+wireDiameter/2, lowerPadding+wallThickness+wireDiameter/2, bearingWidth/2], bearingWidth);
+    // create holes for wires
+    wires(wireDiameter/2, wireDistance, topClipZ*2);
     
-    // cut-out hole in the mid-section
-        // hole through bottom holder located between top holders
-    translate([totalWidth/2,-wireDiameter,-wallThickness])
-        cube([wireDistance-2*(wallThickness+bearingWidth/10), 50, d1], center=true);
-
+    // create hole in the top of the mid section
+    translate([(wireDiameter+wireDistance)/2,0,0])
+        cube([(wireDistance - wireDiameter*1.2), wallThickness*4,wireDiameter], center=true);
     
 }
+// create "clicks" which will secure wires in place
+clicks(wireDiameter/2, wireDistance, topClipZ*2);
